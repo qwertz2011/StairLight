@@ -34,7 +34,6 @@ void LightsWalkIn()
     for (int zoom = 0; zoom <= 255; zoom += 10)
     {
       pixels.setPixelColor(i, zoom, zoom, zoom);
-      //Test
       pixels.show();
     }
 
