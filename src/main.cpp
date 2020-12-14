@@ -5,7 +5,7 @@
 #define INTERRUPT_PIN 2
 #define RESETTED_DELAY 50
 
-int delayval = 150;
+int delayval = 50;
 int resetDelay = RESETTED_DELAY;
 bool lightIsOn = false;
 volatile bool movementFound = false;
@@ -28,20 +28,13 @@ void setup()
 
 void LightsWalkIn()
 {
-  int step = 51;
-  int stepCount = 5;
-
   for (int i = 0; i < NUMPIXELS; i++)
   {
-    for (int x = 0; x < stepCount && i - x >= 0; x++)
+
+    for (int zoom = 0; zoom <= 255; zoom += 10)
     {
-      int stepVal = x * step + step;
-      int nextStepVal = x * (step + 1) + step;
-      for (int zoom = stepVal; zoom <= nextStepVal; zoom++)
-      {
-        pixels.setPixelColor(i - x, stepVal, stepVal, stepVal);
-        pixels.show();
-      }
+      pixels.setPixelColor(i, zoom, zoom, zoom);
+      pixels.show();
     }
 
     pixels.show();
