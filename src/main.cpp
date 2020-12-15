@@ -30,6 +30,8 @@ void movementDetected()
 
 void setup()
 {
+  randomSeed(analogRead(0));
+
   //PIR Sensor
   pinMode(INTERRUPT_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), movementDetected, CHANGE);
@@ -82,7 +84,7 @@ void LightsOnDefault()
 
 void LightsOn()
 {
-  int randomLight = (int)random(0, 2);
+  int randomLight = (int)random(3);
 
   switch (randomLight)
   {
