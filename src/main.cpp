@@ -14,9 +14,11 @@
 #define WALKIN_TIME 7 //Seconds
 #define WALKIN_FADEIN_STEP 15
 
+#define FADEIN_TIME 5 //Seconds
+
 CRGB leds[NUM_LEDS];
 
-int delayval = 50;
+int delayval = 100;
 int resetDelay = RESETTED_DELAY;
 bool lightIsOn = false;
 volatile bool movementFound = false;
@@ -37,6 +39,22 @@ void setup()
   FastLED.setBrightness(BRIGHTNESS);
 }
 
+void LightsOnFadeAll()
+{
+
+  int mDelay = FADEIN_TIME * 1000 / NUM_LEDS / (255 / 10);
+
+  for (int z = 0; z <= 255; z += 10)
+  {
+    for (int i = 0; i < NUM_LEDS; i++)
+    {
+      leds[i] = CRGB(z, z, z);
+      FastLED.show();
+    }
+    delay(mDelay);
+  }
+}
+
 void LightsWalkIn()
 {
   int mDelay = WALKIN_TIME * 1000 / NUM_LEDS / (255 / WALKIN_FADEIN_STEP);
@@ -52,19 +70,37 @@ void LightsWalkIn()
   }
 }
 
-void LightsOn()
+void LightsOnDefault()
 {
-  LightsWalkIn();
-  lightIsOn = true;
-  return;
-
   for (int i = 0; i < NUM_LEDS; i++)
   {
     leds[i] = CRGB::White;
     FastLED.show();
     delay(delayval);
-    lightIsOn = true;
   }
+}
+
+void LightsOn()
+{
+  int randomLight = (int)random(0, 2);
+
+  switch (randomLight)
+  {
+  case 0:
+    LightsOnDefault();
+    break;
+
+  case 1:
+    LightsWalkIn();
+    break;
+
+  case 2:
+  default:
+    LightsOnFadeAll();
+    break;
+  }
+
+  lightIsOn = true;
 }
 
 void LightsOff()
@@ -74,8 +110,9 @@ void LightsOff()
     leds[i] = CRGB::Black;
     FastLED.show();
     delay(delayval);
-    lightIsOn = false;
   }
+
+  lightIsOn = false;
 }
 
 void loop()
