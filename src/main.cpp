@@ -1,16 +1,25 @@
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
+// #include <Adafruit_NeoPixel.h>
+#include <FastLED.h>
 
-#define NUMPIXELS 40
+#define LED_PIN 6
+#define NUM_LEDS 40
+#define BRIGHTNESS 255
+#define COLOR_ORDER GRB
+#define CHIPSET WS2811
+
 #define INTERRUPT_PIN 2
 #define RESETTED_DELAY 50
+
+#define WALKIN_TIME 7 //Seconds
+#define WALKIN_FADEIN_STEP 15
+
+CRGB leds[NUM_LEDS];
 
 int delayval = 50;
 int resetDelay = RESETTED_DELAY;
 bool lightIsOn = false;
 volatile bool movementFound = false;
-
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, 6, NEO_GRB + NEO_KHZ800);
 
 void movementDetected()
 {
@@ -19,26 +28,27 @@ void movementDetected()
 
 void setup()
 {
+  //PIR Sensor
   pinMode(INTERRUPT_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), movementDetected, CHANGE);
 
-  pixels.begin();
-  pixels.setBrightness(255);
+  //FastLED Setup
+  FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.setBrightness(BRIGHTNESS);
 }
 
 void LightsWalkIn()
 {
-  for (int i = 0; i < NUMPIXELS; i++)
+  int mDelay = WALKIN_TIME * 1000 / NUM_LEDS / (255 / WALKIN_FADEIN_STEP);
+
+  for (int i = 0; i < NUM_LEDS; i++)
   {
-
-    for (int zoom = 0; zoom <= 255; zoom += 10)
+    for (int zoom = WALKIN_FADEIN_STEP; zoom <= 255; zoom += WALKIN_FADEIN_STEP)
     {
-      pixels.setPixelColor(i, zoom, zoom, zoom);
-      pixels.show();
+      leds[i].addToRGB(WALKIN_FADEIN_STEP);
+      FastLED.show();
+      delay(mDelay);
     }
-
-    pixels.show();
-    delay(delayval);
   }
 }
 
@@ -48,10 +58,10 @@ void LightsOn()
   lightIsOn = true;
   return;
 
-  for (int i = 0; i < NUMPIXELS; i++)
+  for (int i = 0; i < NUM_LEDS; i++)
   {
-    pixels.setPixelColor(i, 255, 255, 255);
-    pixels.show();
+    leds[i] = CRGB::White;
+    FastLED.show();
     delay(delayval);
     lightIsOn = true;
   }
@@ -59,10 +69,10 @@ void LightsOn()
 
 void LightsOff()
 {
-  for (int i = 0; i < NUMPIXELS; i++)
+  for (int i = 0; i < NUM_LEDS; i++)
   {
-    pixels.setPixelColor(i, 0, 0, 0);
-    pixels.show();
+    leds[i] = CRGB::Black;
+    FastLED.show();
     delay(delayval);
     lightIsOn = false;
   }
