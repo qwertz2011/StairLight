@@ -3,7 +3,7 @@
 #include <FastLED.h>
 
 #define LED_PIN 6
-#define NUM_LEDS 40
+#define NUM_LEDS 300
 #define BRIGHTNESS 255
 #define COLOR_ORDER GRB
 #define CHIPSET WS2811
@@ -72,19 +72,49 @@ void LightsWalkIn()
   }
 }
 
+void LightsOnRandomColor()
+{
+  while (true)
+  {
+    for (int i = 0; i < NUM_LEDS; i++)
+    {
+      uint8_t r1 = random();
+      uint8_t r2 = random();
+      uint8_t r3 = random();
+
+      leds[i] = CRGB(r1, r2, r3);
+      FastLED.show();
+      // delay(delayval);
+    }
+  }
+}
+
+void AllLightsOnRandomColor()
+{
+  while (true)
+  {
+    uint8_t r1 = random();
+    uint8_t r2 = random();
+    uint8_t r3 = random();
+
+    FastLED.showColor(CRGB(r1, r2, r3));
+    delay(250);
+  }
+}
+
 void LightsOnDefault()
 {
   for (int i = 0; i < NUM_LEDS; i++)
   {
     leds[i] = CRGB::White;
     FastLED.show();
-    delay(delayval);
+    // delay(delayval);
   }
 }
 
 void LightsOn()
 {
-  int randomLight = (int)random(3);
+  int randomLight = (int)random(4);
 
   switch (randomLight)
   {
@@ -97,6 +127,14 @@ void LightsOn()
     break;
 
   case 2:
+    LightsOnRandomColor();
+    break;
+
+  case 3:
+    AllLightsOnRandomColor();
+    break;
+
+  case 4:
   default:
     LightsOnFadeAll();
     break;
@@ -132,6 +170,8 @@ void loop()
       LightsOn();
     }
   }
+
+  return;
 
   // LICHT IST AN
   if (lightIsOn)
