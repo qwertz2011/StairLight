@@ -16,7 +16,8 @@
 
 #define WALKIN_FADEIN_STEP 15
 
-CRGB leds[NUM_LEDS];
+// CRGB leds[NUM_LEDS];
+CRGBArray<NUM_LEDS> leds;
 bool lightIsOn = false;
 volatile bool movementFound = false;
 unsigned long timerLightsOff = 0;
@@ -43,7 +44,20 @@ void setup()
 
 int SingleLedDelay(double factor = 1)
 {
-  return (int)LIGHTSON_EFFECT_DURATION / NUM_LEDS * factor;
+  return (int)LIGHTSON_EFFECT_DURATION / (NUM_LEDS * factor);
+}
+
+void LightsOnSections()
+{
+  int mDelay = SingleLedDelay(0.067);
+  uint8_t sectionSize = NUM_LEDS / 20;
+
+  for (int z = 0; z < NUM_LEDS; z += sectionSize)
+  {
+    CRGBSet currentSet = leds(z, z + sectionSize);
+    currentSet = CRGB::White;
+    FastLED.delay(mDelay); //show
+  }
 }
 
 void LightsOnFadeAll()
@@ -126,7 +140,7 @@ void LightsOnDefault()
 void LightsOn()
 {
   int randomLight = (int)random(4);
-  randomLight = 0;
+  randomLight = 4;
 
   switch (randomLight)
   {
@@ -148,6 +162,9 @@ void LightsOn()
     break;
 
   case 4:
+    LightsOnSections();
+    break;
+  case 5:
   default:
     LightsOnFadeAll();
     break;
@@ -204,15 +221,16 @@ void loop()
   //LICHT AUS + BEWEGUNG
 
   //BEWEGUNG
-  if (movementFound == true)
+  if (movementFound)
   {
     movementFound = false;
 
-    if (lightIsOn == false)
+    if (!lightIsOn)
     {
       LightsOn();
     }
 
+    //Time is up - Lights off
     timerLightsOff = millis() + NO_MOVEMENT_LIGHTSOFF_DELAY;
   }
 
