@@ -3,22 +3,22 @@
 #include <FastLED.h>
 
 #define LED_PIN 6
-#define NUM_LEDS 300
-#define BRIGHTNESS 255
+#define NUM_LEDS 150
+#define BRIGHTNESS 10
 #define COLOR_ORDER GRB
 #define CHIPSET WS2811
 
 #define INTERRUPT_PIN 2
 #define RESETTED_DELAY 50
 
-#define WALKIN_TIME 7 //Seconds
+#define WALKIN_TIME 3 //Seconds
 #define WALKIN_FADEIN_STEP 15
 
-#define FADEIN_TIME 5 //Seconds
+#define FADEIN_TIME 3 //Seconds
 
 CRGB leds[NUM_LEDS];
 
-int delayval = 100;
+int delayval = 80;
 int resetDelay = RESETTED_DELAY;
 bool lightIsOn = false;
 volatile bool movementFound = false;
@@ -46,7 +46,7 @@ void LightsOnFadeAll()
 
   int mDelay = FADEIN_TIME * 1000 / NUM_LEDS / (255 / 10);
 
-  for (int z = 0; z <= 255; z += 10)
+  for (int z = 0; z <= 255; z += 20)
   {
     for (int i = 0; i < NUM_LEDS; i++)
     {
@@ -57,12 +57,19 @@ void LightsOnFadeAll()
   }
 }
 
+
 void LightsWalkIn()
 {
   int mDelay = WALKIN_TIME * 1000 / NUM_LEDS / (255 / WALKIN_FADEIN_STEP);
 
+  FastLED.showColor(CRGB::White);
+  return;
+
+
   for (int i = 0; i < NUM_LEDS; i++)
   {
+
+
     for (int zoom = WALKIN_FADEIN_STEP; zoom <= 255; zoom += WALKIN_FADEIN_STEP)
     {
       leds[i].addToRGB(WALKIN_FADEIN_STEP);
@@ -106,6 +113,7 @@ void LightsOnDefault()
 {
   for (int i = 0; i < NUM_LEDS; i++)
   {
+
     leds[i] = CRGB::White;
     FastLED.show();
     // delay(delayval);
@@ -115,11 +123,14 @@ void LightsOnDefault()
 void LightsOn()
 {
   int randomLight = (int)random(4);
+randomLight = 0;
+
 
   switch (randomLight)
   {
   case 0:
-    LightsOnDefault();
+    // LightsOnDefault();
+    LightsWalkIn();
     break;
 
   case 1:
@@ -170,8 +181,6 @@ void loop()
       LightsOn();
     }
   }
-
-  return;
 
   // LICHT IST AN
   if (lightIsOn)
