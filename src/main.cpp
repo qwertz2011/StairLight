@@ -3,25 +3,23 @@
 #include <FastLED.h>
 
 #define LED_PIN 6
+#define INTERRUPT_PIN 2
+
 #define NUM_LEDS 150
 #define BRIGHTNESS 10
 #define COLOR_ORDER GRB
 #define CHIPSET WS2811
 
-#define INTERRUPT_PIN 2
-#define RESETTED_DELAY 50
+#define LIGHTSON_EFFECT_DURATION 3000
+#define LIGHTSOFF_EFFECT_DURATION 3000
+#define NO_MOVEMENT_LIGHTSOFF_DELAY 5000
 
-#define WALKIN_TIME 3 //Seconds
 #define WALKIN_FADEIN_STEP 15
 
-#define FADEIN_TIME 3 //Seconds
-
 CRGB leds[NUM_LEDS];
-
-int delayval = 80;
-int resetDelay = RESETTED_DELAY;
 bool lightIsOn = false;
 volatile bool movementFound = false;
+unsigned long timerLightsOff = 0;
 
 void movementDetected()
 {
@@ -41,10 +39,17 @@ void setup()
   FastLED.setBrightness(BRIGHTNESS);
 }
 
+#pragma region LightsOn
+
+int SingleLedDelay(double factor = 1)
+{
+  return (int)LIGHTSON_EFFECT_DURATION / NUM_LEDS * factor;
+}
+
 void LightsOnFadeAll()
 {
 
-  int mDelay = FADEIN_TIME * 1000 / NUM_LEDS / (255 / 10);
+  int mDelay = LIGHTSON_EFFECT_DURATION / NUM_LEDS / (255 / 10);
 
   for (int z = 0; z <= 255; z += 20)
   {
@@ -57,18 +62,15 @@ void LightsOnFadeAll()
   }
 }
 
-
 void LightsWalkIn()
 {
-  int mDelay = WALKIN_TIME * 1000 / NUM_LEDS / (255 / WALKIN_FADEIN_STEP);
+  int mDelay = LIGHTSON_EFFECT_DURATION / NUM_LEDS / (255 / WALKIN_FADEIN_STEP);
 
   FastLED.showColor(CRGB::White);
   return;
 
-
   for (int i = 0; i < NUM_LEDS; i++)
   {
-
 
     for (int zoom = WALKIN_FADEIN_STEP; zoom <= 255; zoom += WALKIN_FADEIN_STEP)
     {
@@ -105,26 +107,26 @@ void AllLightsOnRandomColor()
     uint8_t r3 = random();
 
     FastLED.showColor(CRGB(r1, r2, r3));
-    delay(250);
+    FastLED.delay(250);
   }
 }
 
 void LightsOnDefault()
 {
+  int mDelay = SingleLedDelay();
+
   for (int i = 0; i < NUM_LEDS; i++)
   {
-
     leds[i] = CRGB::White;
     FastLED.show();
-    // delay(delayval);
+    FastLED.delay(mDelay);
   }
 }
 
 void LightsOn()
 {
   int randomLight = (int)random(4);
-randomLight = 0;
-
+  randomLight = 0;
 
   switch (randomLight)
   {
@@ -153,18 +155,49 @@ randomLight = 0;
 
   lightIsOn = true;
 }
+#pragma endregion
 
-void LightsOff()
+#pragma region LightsOff
+
+void LightsOffDefault()
 {
+  int mDelay = SingleLedDelay();
   for (int i = 0; i < NUM_LEDS; i++)
   {
     leds[i] = CRGB::Black;
     FastLED.show();
-    delay(delayval);
+    FastLED.delay(mDelay);
+  }
+}
+
+void LightsOffInstant()
+{
+  FastLED.clear(true);
+}
+
+void LightsOff()
+{
+
+  int randomLight = (int)random(4);
+  randomLight = 0;
+
+  switch (randomLight)
+  {
+  case 0:
+    LightsOffDefault();
+    break;
+  case 1:
+  default:
+    LightsOffInstant();
+    break;
   }
 
   lightIsOn = false;
 }
+
+#pragma endregion
+
+#pragma region Main
 
 void loop()
 {
@@ -174,12 +207,13 @@ void loop()
   if (movementFound == true)
   {
     movementFound = false;
-    resetDelay = RESETTED_DELAY;
 
     if (lightIsOn == false)
     {
       LightsOn();
     }
+
+    timerLightsOff = millis() + NO_MOVEMENT_LIGHTSOFF_DELAY;
   }
 
   // LICHT IST AN
@@ -187,14 +221,12 @@ void loop()
   {
 
     //Ausschalten wenn delay abgeschlossen
-    if (resetDelay <= 0)
+    if (timerLightsOff <= millis())
     {
       LightsOff();
     }
-    else
-    {
-      delay(delayval);
-      resetDelay--;
-    }
+
+    //TODO - MAYBE IDLE ANIMATION
   }
 }
+#pragma endregion
