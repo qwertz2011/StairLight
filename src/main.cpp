@@ -1,5 +1,4 @@
 #include <Arduino.h>
-// #include <Adafruit_NeoPixel.h>
 #include <FastLED.h>
 
 #define LED_PIN 6
@@ -27,9 +26,9 @@ enum Direction
 // CRGB leds[NUM_LEDS];
 CRGBArray<NUM_LEDS> leds;
 bool lightIsOn = false;
+unsigned long timerLightsOff = 0;
 volatile bool movementFound = false;
 volatile Direction direction = Direction::None;
-unsigned long timerLightsOff = 0;
 
 void movementDetectedFirstFloor()
 {
@@ -57,11 +56,7 @@ void setup()
   FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(BRIGHTNESS);
   FastLED.clear(true);
-
-  Serial.begin(115200);
 }
-
-#pragma region LightsOn
 
 int SingleLedDelay(double factor = 1)
 {
@@ -178,8 +173,6 @@ void LightsOn()
   int randomLight = (int)random(4);
   randomLight = 1;
 
-  Serial.println("Effect " + String(randomLight));
-
   switch (randomLight)
   {
   case 0:
@@ -209,9 +202,6 @@ void LightsOn()
 
   lightIsOn = true;
 }
-#pragma endregion
-
-#pragma region LightsOff
 
 void LightsOffDefault()
 {
@@ -249,10 +239,6 @@ void LightsOff()
 
   lightIsOn = false;
 }
-
-#pragma endregion
-
-#pragma region Main
 
 void loop()
 {
@@ -304,4 +290,3 @@ void loop()
     delay(100);
   }
 }
-#pragma endregion
