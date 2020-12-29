@@ -120,7 +120,7 @@ void LightsWalkIn()
   {
     for (int ZZZ = 0; ZZZ < NUM_LEDS - 1; ZZZ++)
     {
-      leds[ZZZ] = CRGB::White;
+      leds[ZZZ] = CRGB::FairyLight;
       FastLED.delay(mDelay);
     }
   }
