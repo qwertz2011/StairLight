@@ -8,7 +8,10 @@
 #define NUM_LEDS 300
 #define BRIGHTNESS 10
 #define COLOR_ORDER GRB
-#define CHIPSET WS2811
+#define CHIPSET WS2812
+
+#define MAIN_COLOR CRGB::FairyLight
+#define ACCENT_COLOR CRGB::Blue
 
 #define LIGHTSON_EFFECT_DURATION 3000
 #define LIGHTSOFF_EFFECT_DURATION 3000
@@ -77,7 +80,7 @@ void LightsOnSections()
       uint8_t last = max(0, z - sectionSize + 1);
 
       CRGBSet currentSet = leds(first, last);
-      currentSet.fill_gradient_RGB(CRGB::White, CRGB::Blue);
+      currentSet.fill_gradient_RGB(MAIN_COLOR, ACCENT_COLOR);
       FastLED.show();
       delay(mDelay); //show
     }
@@ -87,7 +90,7 @@ void LightsOnSections()
     for (int z = 0; z < NUM_LEDS; z += sectionSize)
     {
       CRGBSet currentSet = leds(z, z + sectionSize - 1);
-      currentSet.fill_gradient_RGB(CRGB::White, CRGB::Blue);
+      currentSet.fill_gradient_RGB(MAIN_COLOR, ACCENT_COLOR);
     }
   }
 }
@@ -123,7 +126,7 @@ void LightsWalkIn()
   {
     for (int ZZZ = NUM_LEDS - 1; ZZZ >= 0; ZZZ--)
     {
-      leds[ZZZ] = CRGB::White;
+      leds[ZZZ] = MAIN_COLOR;
       FastLED.delay(mDelay);
     }
   }
@@ -162,7 +165,7 @@ void LightsOnDefault()
 
   for (int i = 0; i < NUM_LEDS; i++)
   {
-    leds[i] = CRGB::White;
+    leds[i] = MAIN_COLOR;
     FastLED.show();
     delay(mDelay);
   }
@@ -242,26 +245,7 @@ void LightsOff()
 
 void loop()
 {
-
-  // CRGBSet SetA = leds(0, 120);
-  // CRGBSet SetB = leds(121, 299);
-
-  // while (true)
-  // {
-  //   SetB = CRGB::DarkBlue;
-  //   FastLED.delay(1000);
-
-  //   SetB = CRGB::DarkRed;
-  //   FastLED.delay(1000);
-
-  //   SetB = CRGB::DarkGreen;
-  //   FastLED.delay(1000);
-
-  //   FastLED.showColor(CRGB::Yellow);
-  //   delay(500);
-  // }
-
-  //LICHT AUS + BEWEGUNG
+  //LICHT AUS
 
   //BEWEGUNG
   if (movementFound)
@@ -285,8 +269,8 @@ void loop()
       LightsOff();
       FastLED.clear(true);
     }
-
-    //TODO - MAYBE IDLE ANIMATION
-    delay(100);
   }
+
+  //TODO - MAYBE IDLE ANIMATION
+  delay(100);
 }
