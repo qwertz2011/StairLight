@@ -2,7 +2,7 @@
 #include <FastLED.h>
 
 #define AUX_POWER_PIN 10
-#define LED_PIN 6
+#define LED_PIN 7
 #define INTERRUPT_PIN_FIRST_FLOOR 3
 #define INTERRUPT_PIN_GROUND_FLOOR 2
 
