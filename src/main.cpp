@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
+#define AUX_POWER_PIN 10
 #define LED_PIN 6
 #define INTERRUPT_PIN_FIRST_FLOOR 3
 #define INTERRUPT_PIN_GROUND_FLOOR 2
@@ -16,6 +17,7 @@
 #define LIGHTSON_EFFECT_DURATION 3000
 #define LIGHTSOFF_EFFECT_DURATION 3000
 #define NO_MOVEMENT_LIGHTSOFF_DELAY 20000
+#define NO_AUX_POWER_REQUIRED_DELAY 120000
 
 #define WALKIN_FADEIN_STEP 15
 
@@ -28,8 +30,13 @@ enum Direction
 
 // CRGB leds[NUM_LEDS];
 CRGBArray<NUM_LEDS> leds;
+
 bool lightIsOn = false;
+bool auxPowerOn = false;
+
 unsigned long timerLightsOff = 0;
+unsigned long timerAuxPowerOff = 0;
+
 volatile bool movementFound = false;
 volatile Direction direction = Direction::None;
 
@@ -48,6 +55,10 @@ void movementDetectedGroundFloor()
 void setup()
 {
   randomSeed(analogRead(0));
+
+  //AUX Power - Default Power Off
+  pinMode(AUX_POWER_PIN, OUTPUT);
+  digitalWrite(AUX_POWER_PIN, LOW);
 
   //PIR Sensor
   pinMode(INTERRUPT_PIN_FIRST_FLOOR, INPUT);
@@ -171,8 +182,23 @@ void LightsOnDefault()
   }
 }
 
+void TurnAuxPowerOn()
+{
+  digitalWrite(AUX_POWER_PIN, HIGH);
+  auxPowerOn = true;
+}
+
+void TurnAuxPowerOff()
+{
+  digitalWrite(AUX_POWER_PIN, LOW);
+  auxPowerOn = false;
+}
+
 void LightsOn()
 {
+  TurnAuxPowerOn();
+  delay(50);
+
   int randomLight = (int)random(4);
   randomLight = 1;
 
@@ -251,6 +277,13 @@ void loop()
   if (movementFound)
   {
     movementFound = false;
+
+    if (!auxPowerOn)
+    {
+      TurnAuxPowerOn();
+      timerAuxPowerOff = millis() + NO_AUX_POWER_REQUIRED_DELAY;
+    }
+
     if (!lightIsOn)
     {
       LightsOn();
@@ -268,6 +301,16 @@ void loop()
     {
       LightsOff();
       FastLED.clear(true);
+    }
+  }
+
+  //Licht aus AUX Power AN - TurnOff Check
+  if (!lightIsOn && auxPowerOn)
+  {
+    //AUX Power Off
+    if (timerAuxPowerOff <= millis())
+    {
+      TurnAuxPowerOff();
     }
   }
 
