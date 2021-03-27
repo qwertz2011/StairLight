@@ -196,9 +196,6 @@ void TurnAuxPowerOff()
 
 void LightsOn()
 {
-  TurnAuxPowerOn();
-  delay(50);
-
   int randomLight = (int)random(4);
   randomLight = 1;
 
