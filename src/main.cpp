@@ -5,6 +5,8 @@
 #define LED_PIN 7
 #define INTERRUPT_PIN_FIRST_FLOOR 3
 #define INTERRUPT_PIN_GROUND_FLOOR 2
+const uint8_t AMBIENT1_PIN = A2;
+const uint8_t AMBIENT2_PIN = A3;
 
 #define NUM_LEDS 300
 #define BRIGHTNESS 10
@@ -14,6 +16,7 @@
 #define MAIN_COLOR CRGB::FairyLight
 #define ACCENT_COLOR CRGB::Blue
 
+const unsigned long READ_AMBIENT_INTERVAL = 2000;
 #define LIGHTSON_EFFECT_DURATION 3000
 #define LIGHTSOFF_EFFECT_DURATION 3000
 #define NO_MOVEMENT_LIGHTSOFF_DELAY 20000
@@ -28,14 +31,24 @@ enum Direction
   Down = 2
 };
 
+enum AmbientLight
+{
+  Bright = 3,
+  Suttle = 2,
+  Dim = 1,
+  Dark = 0
+};
+
 // CRGB leds[NUM_LEDS];
 CRGBArray<NUM_LEDS> leds;
 
 bool lightIsOn = false;
 bool auxPowerOn = false;
+bool daylight = false;
 
 unsigned long timerLightsOff = 0;
 unsigned long timerAuxPowerOff = 0;
+unsigned long timerReadAmbient = 0;
 
 volatile bool movementFound = false;
 volatile Direction direction = Direction::None;
@@ -266,8 +279,41 @@ void LightsOff()
   lightIsOn = false;
 }
 
+int GetAmbient(uint8_t pin)
+{
+  return analogRead(pin);
+}
+
+AmbientLight AmbientToAnbientLight(int ambient)
+{
+  long allValue = map(ambient, 0, 1000, 0, 4);
+  AmbientLight all = static_cast<AmbientLight>(allValue);
+  return all;
+}
+
 void loop()
 {
+
+  //Ambient Light Level
+  if (timerReadAmbient <= millis())
+  {
+    int ambient1 = GetAmbient(AMBIENT1_PIN);
+    int ambient2 = GetAmbient(AMBIENT2_PIN);
+    int ambientAverage = (ambient1 + ambient2) / 2;
+    AmbientLight ambientLight = AmbientToAnbientLight(ambientAverage);
+
+    if (ambientLight == AmbientLight::Suttle || ambientLight == AmbientLight::Dark)
+    {
+      daylight = false;
+    }
+    else
+    {
+      daylight = true;
+    }
+
+    timerReadAmbient = millis() + READ_AMBIENT_INTERVAL;
+  }
+
   //LICHT AUS
 
   //BEWEGUNG
@@ -275,15 +321,18 @@ void loop()
   {
     movementFound = false;
 
-    if (!auxPowerOn)
+    if (!daylight)
     {
-      TurnAuxPowerOn();
-      timerAuxPowerOff = millis() + NO_AUX_POWER_REQUIRED_DELAY;
-    }
+      if (!auxPowerOn)
+      {
+        TurnAuxPowerOn();
+        timerAuxPowerOff = millis() + NO_AUX_POWER_REQUIRED_DELAY;
+      }
 
-    if (!lightIsOn)
-    {
-      LightsOn();
+      if (!lightIsOn)
+      {
+        LightsOn();
+      }
     }
 
     //Time is up - Lights off
