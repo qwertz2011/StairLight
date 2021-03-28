@@ -55,14 +55,14 @@ volatile Direction direction = Direction::None;
 
 void movementDetectedFirstFloor()
 {
-  movementFound = true;
   direction = Direction::Down;
+  movementFound = true;
 }
 
 void movementDetectedGroundFloor()
 {
-  movementFound = true;
   direction = Direction::Up;
+  movementFound = true;
 }
 
 void setup()
