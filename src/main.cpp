@@ -1,12 +1,14 @@
 #include <Arduino.h>
+#include <Adafruit_SSD1306.h>
+#define FASTLED_INTERNAL //Disable Debug Version Number of FastLED
 #include <FastLED.h>
 
 #define AUX_POWER_PIN 10
 #define LED_PIN 7
 #define INTERRUPT_PIN_FIRST_FLOOR 3
 #define INTERRUPT_PIN_GROUND_FLOOR 2
-const uint8_t AMBIENT1_PIN = A2;
-const uint8_t AMBIENT2_PIN = A3;
+#define AMBIENT1_PIN (uint8_t) A2
+#define AMBIENT2_PIN (uint8_t) A3
 
 #define NUM_LEDS 300
 #define BRIGHTNESS 10
@@ -16,13 +18,19 @@ const uint8_t AMBIENT2_PIN = A3;
 #define MAIN_COLOR CRGB::FairyLight
 #define ACCENT_COLOR CRGB::Blue
 
-const unsigned long READ_AMBIENT_INTERVAL = 2000;
-#define LIGHTSON_EFFECT_DURATION 3000
-#define LIGHTSOFF_EFFECT_DURATION 3000
-#define NO_MOVEMENT_LIGHTSOFF_DELAY 20000
-#define NO_AUX_POWER_REQUIRED_DELAY 120000
+#define READ_AMBIENT_INTERVAL 500ul
+#define LIGHTSON_EFFECT_DURATION 3000u
+#define LIGHTSOFF_EFFECT_DURATION 3000u
+#define NO_MOVEMENT_LIGHTSOFF_DELAY 20000u
+#define NO_AUX_POWER_REQUIRED_DELAY 120000u
 
 #define WALKIN_FADEIN_STEP 15
+
+#define SCREEN_WIDTH 128    // OLED display width, in pixels
+#define SCREEN_HEIGHT 32    // OLED display height, in pixels
+#define OLED_RESET 4        // Reset pin # (or -1 if sharing Arduino reset pin)
+#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 enum Direction
 {
@@ -53,6 +61,19 @@ unsigned long timerReadAmbient = 0;
 volatile bool movementFound = false;
 volatile Direction direction = Direction::None;
 
+void PrintText(String text, bool clear = false)
+{
+  if (clear)
+  {
+    display.clearDisplay();
+  }
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println(text); //Textzeile ausgeben
+  display.display();
+}
+
 void movementDetectedFirstFloor()
 {
   direction = Direction::Down;
@@ -69,6 +90,8 @@ void setup()
 {
   randomSeed(analogRead(0));
 
+  pinMode(13, OUTPUT);
+
   //AUX Power - Default Power Off
   pinMode(AUX_POWER_PIN, OUTPUT);
   digitalWrite(AUX_POWER_PIN, LOW);
@@ -76,8 +99,21 @@ void setup()
   //PIR Sensor
   pinMode(INTERRUPT_PIN_FIRST_FLOOR, INPUT);
   pinMode(INTERRUPT_PIN_GROUND_FLOOR, INPUT);
-  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN_FIRST_FLOOR), movementDetectedFirstFloor, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN_GROUND_FLOOR), movementDetectedGroundFloor, CHANGE);
+
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+  {
+    digitalWrite(13, HIGH);
+    delay(500);
+    digitalWrite(13, LOW);
+    delay(500);
+    digitalWrite(13, HIGH);
+    delay(500);
+    digitalWrite(13, LOW);
+  }
+
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN_FIRST_FLOOR), movementDetectedFirstFloor, RISING);
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN_GROUND_FLOOR), movementDetectedGroundFloor, RISING);
 
   //FastLED Setup
   FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
@@ -89,7 +125,7 @@ int SingleLedDelay(double factor = 1)
 {
   return (int)LIGHTSON_EFFECT_DURATION / (NUM_LEDS * factor);
 }
-
+/*
 void LightsOnSections()
 {
   int mDelay = SingleLedDelay(0.067);
@@ -117,11 +153,10 @@ void LightsOnSections()
       currentSet.fill_gradient_RGB(MAIN_COLOR, ACCENT_COLOR);
     }
   }
-}
+}*/
 
 void LightsOnFadeAll()
 {
-
   int mDelay = LIGHTSON_EFFECT_DURATION / NUM_LEDS / (255 / 10);
 
   for (int z = 0; z <= 255; z += 20)
@@ -230,9 +265,9 @@ void LightsOn()
     AllLightsOnRandomColor();
     break;
 
-  case 4:
-    LightsOnSections();
-    break;
+  // // case 4:
+  // //   LightsOnSections();
+  // //  break;
   case 5:
   default:
     LightsOnFadeAll();
@@ -263,7 +298,6 @@ void LightsOff()
 {
 
   int randomLight = (int)random(4);
-  randomLight = 0;
 
   switch (randomLight)
   {
@@ -291,15 +325,19 @@ AmbientLight AmbientToAnbientLight(int ambient)
   return all;
 }
 
+unsigned int ambient1 = 0;
+unsigned int ambient2 = 0;
+unsigned int ambientAverage = 0;
+
 void loop()
 {
 
   //Ambient Light Level
   if (timerReadAmbient <= millis())
   {
-    int ambient1 = GetAmbient(AMBIENT1_PIN);
-    int ambient2 = GetAmbient(AMBIENT2_PIN);
-    int ambientAverage = (ambient1 + ambient2) / 2;
+    ambient1 = GetAmbient(AMBIENT1_PIN);
+    ambient2 = GetAmbient(AMBIENT2_PIN);
+    ambientAverage = (ambient1 + ambient2) / 2;
     AmbientLight ambientLight = AmbientToAnbientLight(ambientAverage);
 
     if (ambientLight == AmbientLight::Suttle || ambientLight == AmbientLight::Dark)
@@ -319,6 +357,22 @@ void loop()
   //BEWEGUNG
   if (movementFound)
   {
+
+    if (direction == Direction::Down)
+    {
+      PrintText("OG", true);
+    }
+    else if (direction == Direction::Up)
+    {
+      PrintText("EG", true);
+    }
+    else
+    {
+      PrintText("NO DIR", true);
+    }
+
+    delay(1000);
+
     movementFound = false;
 
     if (!daylight)
@@ -326,6 +380,8 @@ void loop()
       if (!auxPowerOn)
       {
         TurnAuxPowerOn();
+        delay(50);
+
         timerAuxPowerOff = millis() + NO_AUX_POWER_REQUIRED_DELAY;
       }
 
@@ -362,4 +418,6 @@ void loop()
 
   //TODO - MAYBE IDLE ANIMATION
   delay(100);
+
+  PrintText("Ambient: " + String(ambient1) + "|" + String(ambient2) + "|" + String(ambientAverage) + "\nMovement: ", true);
 }
