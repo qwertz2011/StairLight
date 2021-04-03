@@ -306,14 +306,15 @@ void LightsOff()
   lightIsOn = false;
 }
 
-int GetAmbient(uint8_t pin)
+uint16_t GetAmbient(uint8_t pin)
 {
+  analogRead(pin); //Test: Read two times zu get better readings
   return analogRead(pin);
 }
 
-unsigned int ambient1 = 0;
-unsigned int ambient2 = 0;
-unsigned int ambientAverage = 0;
+uint16_t ambient1 = 0;
+uint16_t ambient2 = 0;
+uint16_t ambientAverage = 0;
 
 void loop()
 {
