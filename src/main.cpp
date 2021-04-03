@@ -84,8 +84,6 @@ void movementDetectedGroundFloor()
   movementFound = true;
 }
 
-
-
 int SingleLedDelay(double factor = 1)
 {
   return (int)LIGHTSON_EFFECT_DURATION / (NUM_LEDS * factor);
@@ -297,9 +295,9 @@ void ReadAmbient()
 }
 
 #include <TaskTimer.h>
-TaskTimer lightsOffTimer = TaskTimer(LightsOff, 5000);
-TaskTimer readAmbientTimer = TaskTimer(ReadAmbient, 2000);
-TaskTimer auxPowerOffTimer = TaskTimer(TurnAuxPowerOff, 10000);
+TaskTimer readAmbientTimer = TaskTimer(ReadAmbient, 2000, false);
+TaskTimer lightsOffTimer = TaskTimer(LightsOff, 5000, true);
+TaskTimer auxPowerOffTimer = TaskTimer(TurnAuxPowerOff, 10000, true);
 
 void setup()
 {
@@ -326,9 +324,6 @@ void setup()
 
 void loop()
 {
-
-  //LICHT AUS
-
   //BEWEGUNG
   if (movementFound)
   {
@@ -361,14 +356,14 @@ void loop()
         TurnAuxPowerOn();
         delay(50);
 
-        auxPowerOffTimer.Activate();
+        auxPowerOffTimer.Activate(true);
       }
 
       //Lights ON
       if (!lightIsOn)
       {
         LightsOn();
-        lightsOffTimer.Activate();
+        lightsOffTimer.Activate(true);
       }
     }
 
@@ -383,6 +378,7 @@ void loop()
     auxPowerOffTimer.ResetTimer();
   }
 
+  readAmbientTimer.Tick();
   lightsOffTimer.Tick();
   auxPowerOffTimer.Tick();
 
