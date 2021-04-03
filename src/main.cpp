@@ -19,6 +19,7 @@
 #define ACCENT_COLOR CRGB::Blue
 
 #define READ_AMBIENT_INTERVAL 500ul
+#define AMBIENT_DAYLIGHT_THRESHOLD 200u
 #define LIGHTSON_EFFECT_DURATION 3000u
 #define LIGHTSOFF_EFFECT_DURATION 3000u
 #define NO_MOVEMENT_LIGHTSOFF_DELAY 20000u
@@ -37,14 +38,6 @@ enum Direction
   None = 0,
   Up = 1,
   Down = 2
-};
-
-enum AmbientLight
-{
-  Bright = 3,
-  Suttle = 2,
-  Dim = 1,
-  Dark = 0
 };
 
 // CRGB leds[NUM_LEDS];
@@ -318,13 +311,6 @@ int GetAmbient(uint8_t pin)
   return analogRead(pin);
 }
 
-AmbientLight AmbientToAnbientLight(int ambient)
-{
-  long allValue = map(ambient, 0, 1000, 0, 4);
-  AmbientLight all = static_cast<AmbientLight>(allValue);
-  return all;
-}
-
 unsigned int ambient1 = 0;
 unsigned int ambient2 = 0;
 unsigned int ambientAverage = 0;
@@ -338,16 +324,8 @@ void loop()
     ambient1 = GetAmbient(AMBIENT1_PIN);
     ambient2 = GetAmbient(AMBIENT2_PIN);
     ambientAverage = (ambient1 + ambient2) / 2;
-    AmbientLight ambientLight = AmbientToAnbientLight(ambientAverage);
 
-    if (ambientLight == AmbientLight::Suttle || ambientLight == AmbientLight::Dark)
-    {
-      daylight = false;
-    }
-    else
-    {
-      daylight = true;
-    }
+    daylight = ambientAverage <= AMBIENT_DAYLIGHT_THRESHOLD;
 
     timerReadAmbient = millis() + READ_AMBIENT_INTERVAL;
   }
@@ -419,5 +397,5 @@ void loop()
   //TODO - MAYBE IDLE ANIMATION
   delay(100);
 
-  PrintText("Ambient: " + String(ambient1) + "|" + String(ambient2) + "|" + String(ambientAverage) + "\nMovement: ", true);
+  PrintText("Ambient: " + String(ambient1) + "|" + String(ambient2) + "|" + String(ambientAverage) + "\nDaylight: " + String(daylight), true);
 }
