@@ -5,8 +5,8 @@
 
 #define AUX_POWER_PIN 10
 #define LED_PIN 7
-#define INTERRUPT_PIN_FIRST_FLOOR 3
-#define INTERRUPT_PIN_GROUND_FLOOR 2
+#define INTERRUPT_PIN_FIRST_FLOOR (uint8_t)3
+#define INTERRUPT_PIN_GROUND_FLOOR (uint8_t)2
 #define AMBIENT1_PIN (uint8_t) A2
 #define AMBIENT2_PIN (uint8_t) A3
 
@@ -27,11 +27,12 @@
 
 #define WALKIN_FADEIN_STEP 15
 
-#define SCREEN_WIDTH 128    // OLED display width, in pixels
-#define SCREEN_HEIGHT 32    // OLED display height, in pixels
-#define OLED_RESET 4        // Reset pin # (or -1 if sharing Arduino reset pin)
-#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// DISPLAY (!RAM! Problem)
+// #define SCREEN_WIDTH 128    // OLED display width, in pixels
+// #define SCREEN_HEIGHT 32    // OLED display height, in pixels
+// #define OLED_RESET 4        // Reset pin # (or -1 if sharing Arduino reset pin)
+// #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
+// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 enum Direction
 {
@@ -54,27 +55,35 @@ unsigned long timerReadAmbient = 0;
 volatile bool movementFound = false;
 volatile Direction direction = Direction::None;
 
-void PrintText(String text, bool clear = false)
-{
-  if (clear)
-  {
-    display.clearDisplay();
-  }
-  display.setTextColor(SSD1306_WHITE);
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.println(text); //Textzeile ausgeben
-  display.display();
-}
+// void PrintText(String text, bool clear = false)
+// {
+//   if (clear)
+//   {
+//     display.clearDisplay();
+//   }
+//   display.setTextColor(SSD1306_WHITE);
+//   display.setTextSize(1);
+//   display.setCursor(0, 0);
+//   display.println(text); //Textzeile ausgeben
+//   display.display();
+// }
 
 void movementDetectedFirstFloor()
 {
+  if (movementFound)
+  {
+    return;
+  }
   direction = Direction::Down;
   movementFound = true;
 }
 
 void movementDetectedGroundFloor()
 {
+  if (movementFound)
+  {
+    return;
+  }
   direction = Direction::Up;
   movementFound = true;
 }
@@ -93,17 +102,17 @@ void setup()
   pinMode(INTERRUPT_PIN_FIRST_FLOOR, INPUT);
   pinMode(INTERRUPT_PIN_GROUND_FLOOR, INPUT);
 
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
-  {
-    digitalWrite(13, HIGH);
-    delay(500);
-    digitalWrite(13, LOW);
-    delay(500);
-    digitalWrite(13, HIGH);
-    delay(500);
-    digitalWrite(13, LOW);
-  }
+  // // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  // if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+  // {
+  //   digitalWrite(13, HIGH);
+  //   delay(500);
+  //   digitalWrite(13, LOW);
+  //   delay(500);
+  //   digitalWrite(13, HIGH);
+  //   delay(500);
+  //   digitalWrite(13, LOW);
+  // }
 
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN_FIRST_FLOOR), movementDetectedFirstFloor, RISING);
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN_GROUND_FLOOR), movementDetectedGroundFloor, RISING);
@@ -325,9 +334,7 @@ void loop()
     ambient1 = GetAmbient(AMBIENT1_PIN);
     ambient2 = GetAmbient(AMBIENT2_PIN);
     ambientAverage = (ambient1 + ambient2) / 2;
-
-    daylight = ambientAverage <= AMBIENT_DAYLIGHT_THRESHOLD;
-
+    daylight = ambientAverage >= AMBIENT_DAYLIGHT_THRESHOLD;
     timerReadAmbient = millis() + READ_AMBIENT_INTERVAL;
   }
 
@@ -336,26 +343,30 @@ void loop()
   //BEWEGUNG
   if (movementFound)
   {
-
     if (direction == Direction::Down)
     {
-      PrintText("OG", true);
+      delay(1);
+      if (digitalRead(INTERRUPT_PIN_FIRST_FLOOR) != HIGH)
+      {
+        return;
+      }
     }
     else if (direction == Direction::Up)
     {
-      PrintText("EG", true);
+      if (digitalRead(INTERRUPT_PIN_GROUND_FLOOR) != HIGH)
+      {
+        return;
+      }
     }
     else
     {
-      PrintText("NO DIR", true);
+      return;
     }
 
-    delay(1000);
-
-    movementFound = false;
-
+    //no Daylight
     if (!daylight)
     {
+      //Power ON
       if (!auxPowerOn)
       {
         TurnAuxPowerOn();
@@ -364,17 +375,21 @@ void loop()
         timerAuxPowerOff = millis() + NO_AUX_POWER_REQUIRED_DELAY;
       }
 
+      //Lights ON
       if (!lightIsOn)
       {
         LightsOn();
       }
     }
 
-    //Time is up - Lights off
+    //Reset Movement Trigger
+    movementFound = false;
+
+    //Set Lightsoff Timer
     timerLightsOff = millis() + NO_MOVEMENT_LIGHTSOFF_DELAY;
   }
 
-  // LICHT IST AN
+  //Check Timer to turn lights off
   if (lightIsOn)
   {
     //Ausschalten wenn delay abgeschlossen
@@ -385,7 +400,7 @@ void loop()
     }
   }
 
-  //Licht aus AUX Power AN - TurnOff Check
+  //Check Timer to turn off aux power
   if (!lightIsOn && auxPowerOn)
   {
     //AUX Power Off
@@ -398,5 +413,5 @@ void loop()
   //TODO - MAYBE IDLE ANIMATION
   delay(100);
 
-  PrintText("Ambient: " + String(ambient1) + "|" + String(ambient2) + "|" + String(ambientAverage) + "\nDaylight: " + String(daylight), true);
+  // PrintText("Ambient: " + String(ambient1) + "|" + String(ambient2) + "|" + String(ambientAverage) + "\nDaylight: " + String(daylight), true);
 }
