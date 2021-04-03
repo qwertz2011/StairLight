@@ -401,10 +401,14 @@ void loop()
   }
 
   //Check Timer to turn off aux power
-  if (!lightIsOn && auxPowerOn)
+  if (auxPowerOn)
   {
-    //AUX Power Off
-    if (timerAuxPowerOff <= millis())
+    if (lightIsOn)
+    {
+      //Set Lightsoff Timer
+      timerLightsOff = millis() + NO_MOVEMENT_LIGHTSOFF_DELAY;
+    }
+    else if (timerAuxPowerOff <= millis())
     {
       TurnAuxPowerOff();
     }
