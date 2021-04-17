@@ -43,10 +43,20 @@ void TaskTimer::Activate(bool resetTimer)
 {
     if (resetTimer)
         this->ResetTimer();
-    this->_enabled = true;
+
+    if (!this->_enabled)
+        this->_enabled = true;
 }
 
 void TaskTimer::Deactivate()
 {
-    this->_enabled = false;
+    if (this->_enabled)
+    {
+        this->_enabled = false;
+    }
+}
+
+bool TaskTimer::IsEnabled()
+{
+    return this->_enabled;
 }

@@ -21,6 +21,7 @@ public:
     void Deactivate();
     void Activate(bool resetTimer = false);
     void ResetTimer();
+    bool IsEnabled();
 };
 
 #endif
