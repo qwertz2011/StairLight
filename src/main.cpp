@@ -295,9 +295,9 @@ void ReadAmbient()
 }
 
 #include <TaskTimer.h>
-TaskTimer readAmbientTimer = TaskTimer(ReadAmbient, 2000, false);
-TaskTimer lightsOffTimer = TaskTimer(LightsOff, 5000, true);
-TaskTimer auxPowerOffTimer = TaskTimer(TurnAuxPowerOff, 10000, true);
+TaskTimer readAmbientTimer = TaskTimer(ReadAmbient, READ_AMBIENT_INTERVAL, false);
+TaskTimer lightsOffTimer = TaskTimer(LightsOff, NO_MOVEMENT_LIGHTSOFF_DELAY, true);
+TaskTimer auxPowerOffTimer = TaskTimer(TurnAuxPowerOff, NO_AUX_POWER_REQUIRED_DELAY, true);
 
 void setup()
 {
@@ -376,6 +376,11 @@ void loop()
   if (lightIsOn)
   {
     auxPowerOffTimer.ResetTimer();
+    readAmbientTimer.Deactivate();
+  }
+  else
+  {
+    readAmbientTimer.Activate();
   }
 
   readAmbientTimer.Tick();
