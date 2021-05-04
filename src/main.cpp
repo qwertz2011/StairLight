@@ -406,7 +406,7 @@ void loop()
     if (lightIsOn)
     {
       //Set Lightsoff Timer
-      timerLightsOff = millis() + NO_MOVEMENT_LIGHTSOFF_DELAY;
+      timerAuxPowerOff = millis() + NO_MOVEMENT_LIGHTSOFF_DELAY;
     }
     else if (timerAuxPowerOff <= millis())
     {
