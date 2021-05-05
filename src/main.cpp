@@ -18,12 +18,14 @@
 #define MAIN_COLOR CRGB::FairyLight
 #define ACCENT_COLOR CRGB::Blue
 
+#define AMBIENT_DAYLIGHT_THRESHOLD 200ul
+
 #define READ_AMBIENT_INTERVAL 500ul
-#define AMBIENT_DAYLIGHT_THRESHOLD 200u
-#define LIGHTSON_EFFECT_DURATION 3000u
-#define LIGHTSOFF_EFFECT_DURATION 3000u
-#define NO_MOVEMENT_LIGHTSOFF_DELAY 20000u
-#define NO_AUX_POWER_REQUIRED_DELAY 120000u
+#define NO_MOVEMENT_LIGHTSOFF_DELAY 20000ul
+#define NO_AUX_POWER_REQUIRED_DELAY 120000ul
+
+#define LIGHTSON_EFFECT_DURATION 3000ul
+#define LIGHTSOFF_EFFECT_DURATION 3000ul
 
 #define WALKIN_FADEIN_STEP 15
 
@@ -47,10 +49,6 @@ CRGBArray<NUM_LEDS> leds;
 bool lightIsOn = false;
 bool auxPowerOn = false;
 bool daylight = false;
-
-unsigned long timerLightsOff = 0;
-unsigned long timerAuxPowerOff = 0;
-unsigned long timerReadAmbient = 0;
 
 volatile bool movementFound = false;
 volatile Direction direction = Direction::None;
@@ -86,41 +84,6 @@ void movementDetectedGroundFloor()
   }
   direction = Direction::Up;
   movementFound = true;
-}
-
-void setup()
-{
-  randomSeed(analogRead(0));
-
-  pinMode(13, OUTPUT);
-
-  //AUX Power - Default Power Off
-  pinMode(AUX_POWER_PIN, OUTPUT);
-  digitalWrite(AUX_POWER_PIN, LOW);
-
-  //PIR Sensor
-  pinMode(INTERRUPT_PIN_FIRST_FLOOR, INPUT);
-  pinMode(INTERRUPT_PIN_GROUND_FLOOR, INPUT);
-
-  // // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  // if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
-  // {
-  //   digitalWrite(13, HIGH);
-  //   delay(500);
-  //   digitalWrite(13, LOW);
-  //   delay(500);
-  //   digitalWrite(13, HIGH);
-  //   delay(500);
-  //   digitalWrite(13, LOW);
-  // }
-
-  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN_FIRST_FLOOR), movementDetectedFirstFloor, RISING);
-  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN_GROUND_FLOOR), movementDetectedGroundFloor, RISING);
-
-  //FastLED Setup
-  FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
-  FastLED.setBrightness(BRIGHTNESS);
-  FastLED.clear(true);
 }
 
 int SingleLedDelay(double factor = 1)
@@ -159,7 +122,7 @@ void LightsOnSections()
 
 void LightsOnFadeAll()
 {
-  int mDelay = LIGHTSON_EFFECT_DURATION / NUM_LEDS / (255 / 10);
+  unsigned long mDelay = LIGHTSON_EFFECT_DURATION / NUM_LEDS / (255 / 10);
 
   for (int z = 0; z <= 255; z += 20)
   {
@@ -325,27 +288,50 @@ uint16_t ambient1 = 0;
 uint16_t ambient2 = 0;
 uint16_t ambientAverage = 0;
 
+void ReadAmbient()
+{
+  ambient1 = GetAmbient(AMBIENT1_PIN);
+  ambient2 = GetAmbient(AMBIENT2_PIN);
+  ambientAverage = (ambient1 + ambient2) / 2;
+  daylight = ambientAverage >= AMBIENT_DAYLIGHT_THRESHOLD;
+}
+
+#include <TaskTimer.h>
+TaskTimer readAmbientTimer = TaskTimer(ReadAmbient, READ_AMBIENT_INTERVAL, false);
+TaskTimer lightsOffTimer = TaskTimer(LightsOff, NO_MOVEMENT_LIGHTSOFF_DELAY, true);
+TaskTimer auxPowerOffTimer = TaskTimer(TurnAuxPowerOff, NO_AUX_POWER_REQUIRED_DELAY, true);
+
+void setup()
+{
+  randomSeed(analogRead(0));
+
+  pinMode(13, OUTPUT);
+
+  //AUX Power - Default Power Off
+  pinMode(AUX_POWER_PIN, OUTPUT);
+  digitalWrite(AUX_POWER_PIN, LOW);
+
+  //PIR Sensor
+  pinMode(INTERRUPT_PIN_FIRST_FLOOR, INPUT);
+  pinMode(INTERRUPT_PIN_GROUND_FLOOR, INPUT);
+
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN_FIRST_FLOOR), movementDetectedFirstFloor, RISING);
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN_GROUND_FLOOR), movementDetectedGroundFloor, RISING);
+
+  //FastLED Setup
+  FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.setBrightness(BRIGHTNESS);
+  FastLED.clear(true);
+}
+
 void loop()
 {
-
-  //Ambient Light Level
-  if (timerReadAmbient <= millis())
-  {
-    ambient1 = GetAmbient(AMBIENT1_PIN);
-    ambient2 = GetAmbient(AMBIENT2_PIN);
-    ambientAverage = (ambient1 + ambient2) / 2;
-    daylight = ambientAverage >= AMBIENT_DAYLIGHT_THRESHOLD;
-    timerReadAmbient = millis() + READ_AMBIENT_INTERVAL;
-  }
-
-  //LICHT AUS
-
   //BEWEGUNG
   if (movementFound)
   {
+    delay(1);
     if (direction == Direction::Down)
     {
-      delay(1);
       if (digitalRead(INTERRUPT_PIN_FIRST_FLOOR) != HIGH)
       {
         return;
@@ -372,47 +358,36 @@ void loop()
         TurnAuxPowerOn();
         delay(50);
 
-        timerAuxPowerOff = millis() + NO_AUX_POWER_REQUIRED_DELAY;
+        auxPowerOffTimer.Activate(true);
       }
 
       //Lights ON
       if (!lightIsOn)
       {
         LightsOn();
+        lightsOffTimer.Activate(true);
       }
     }
 
     //Reset Movement Trigger
     movementFound = false;
 
-    //Set Lightsoff Timer
-    timerLightsOff = millis() + NO_MOVEMENT_LIGHTSOFF_DELAY;
+    lightsOffTimer.ResetTimer();
   }
 
-  //Check Timer to turn lights off
   if (lightIsOn)
   {
-    //Ausschalten wenn delay abgeschlossen
-    if (timerLightsOff <= millis())
-    {
-      LightsOff();
-      FastLED.clear(true);
-    }
+    auxPowerOffTimer.ResetTimer();
+    readAmbientTimer.Deactivate();
+  }
+  else
+  {
+    readAmbientTimer.Activate();
   }
 
-  //Check Timer to turn off aux power
-  if (auxPowerOn)
-  {
-    if (lightIsOn)
-    {
-      //Set Lightsoff Timer
-      timerLightsOff = millis() + NO_MOVEMENT_LIGHTSOFF_DELAY;
-    }
-    else if (timerAuxPowerOff <= millis())
-    {
-      TurnAuxPowerOff();
-    }
-  }
+  readAmbientTimer.Tick();
+  lightsOffTimer.Tick();
+  auxPowerOffTimer.Tick();
 
   //TODO - MAYBE IDLE ANIMATION
   delay(100);
