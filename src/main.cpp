@@ -48,7 +48,8 @@ bool auxPowerOn = false;
 bool daylight = false;
 
 volatile bool movementFound = false;
-volatile Direction direction = Direction::None;
+volatile Direction movementDirection = Direction::None;
+Direction direction = Direction::None;
 
 void movementDetectedFirstFloor()
 {
@@ -56,7 +57,7 @@ void movementDetectedFirstFloor()
   {
     return;
   }
-  direction = Direction::Down;
+  movementDirection = Direction::Down;
   movementFound = true;
 }
 
@@ -66,7 +67,7 @@ void movementDetectedGroundFloor()
   {
     return;
   }
-  direction = Direction::Up;
+  movementDirection = Direction::Up;
   movementFound = true;
 }
 
@@ -243,7 +244,6 @@ void LightsOffInstant()
   FastLED.clear(true);
 }
 
-
 void IdleAnimationTick()
 {
   leds.fill_solid(MAIN_COLOR);
@@ -345,27 +345,32 @@ void setup()
   FastLED.clear(true);
 }
 
+bool IsStableMovementDirection()
+{
+  delay(1);
+  if (movementDirection == Direction::Down)
+  {
+    if (digitalRead(INTERRUPT_PIN_FIRST_FLOOR) != HIGH)
+    {
+      return false;
+    }
+  }
+  else
+  {
+    if (digitalRead(INTERRUPT_PIN_GROUND_FLOOR) != HIGH)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
 void loop()
 {
   //BEWEGUNG
   if (movementFound)
   {
-    delay(1);
-    if (direction == Direction::Down)
-    {
-      if (digitalRead(INTERRUPT_PIN_FIRST_FLOOR) != HIGH)
-      {
-        return;
-      }
-    }
-    else if (direction == Direction::Up)
-    {
-      if (digitalRead(INTERRUPT_PIN_GROUND_FLOOR) != HIGH)
-      {
-        return;
-      }
-    }
-    else
+    if (!IsStableMovementDirection())
     {
       return;
     }
@@ -377,14 +382,14 @@ void loop()
       if (!auxPowerOn)
       {
         TurnAuxPowerOn();
-        delay(50);
-
+        delay(40);
         auxPowerOffTimer.Activate(true);
       }
 
       //Lights ON
       if (!lightIsOn)
       {
+        direction = movementDirection;
         LightsOn();
         StartIdleAnimation();
         lightsOffTimer.Activate(true);
@@ -411,7 +416,4 @@ void loop()
   lightsOffTimer.Tick();
   auxPowerOffTimer.Tick();
   idleAnimationTimer.Tick();
-
-  //TODO - MAYBE IDLE ANIMATION
-  delay(50);
 }
