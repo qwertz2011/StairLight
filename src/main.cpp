@@ -2,6 +2,7 @@
 #include <Adafruit_SSD1306.h>
 #define FASTLED_INTERNAL //Disable Debug Version Number of FastLED
 #include <FastLED.h>
+#include <TaskTimer.h>
 
 #define AUX_POWER_PIN 10
 #define LED_PIN 7
@@ -10,7 +11,7 @@
 #define AMBIENT1_PIN (uint8_t) A2
 #define AMBIENT2_PIN (uint8_t) A3
 
-#define NUM_LEDS 300
+#define NUM_LEDS (uint16_t) 300
 #define BRIGHTNESS 10
 #define COLOR_ORDER GRB
 #define CHIPSET WS2812
@@ -38,6 +39,8 @@ enum Direction
 
 // CRGB leds[NUM_LEDS];
 CRGBArray<NUM_LEDS> leds;
+
+uint16_t curIdleLed = 0;
 
 bool lightIsOn = false;
 bool auxPowerOn = false;
@@ -239,9 +242,29 @@ void LightsOffInstant()
   FastLED.clear(true);
 }
 
+
+void IdleAnimationTick()
+{
+  leds.fill_solid(MAIN_COLOR);
+  leds[curIdleLed] = ACCENT_COLOR;
+
+  if (direction == Direction::Down)
+  {
+    curIdleLed = curIdleLed <= 1 ? NUM_LEDS : curIdleLed - 1;
+  }
+  else
+  {
+    curIdleLed = curIdleLed > NUM_LEDS ? 0 : curIdleLed + 1;
+  }
+}
+
+TaskTimer idleAnimationTimer = TaskTimer(IdleAnimationTick, 100, false);
+
 void LightsOff()
 {
-  int randomLight = (int)random(0,1);
+  idleAnimationTimer.Deactivate();
+
+  int randomLight = (int)random(0, 1);
 
   switch (randomLight)
   {
@@ -275,10 +298,27 @@ void ReadAmbient()
   daylight = ambientAverage >= AMBIENT_DAYLIGHT_THRESHOLD;
 }
 
-#include <TaskTimer.h>
+
+
 TaskTimer readAmbientTimer = TaskTimer(ReadAmbient, READ_AMBIENT_INTERVAL, false);
 TaskTimer lightsOffTimer = TaskTimer(LightsOff, NO_MOVEMENT_LIGHTSOFF_DELAY, true);
 TaskTimer auxPowerOffTimer = TaskTimer(TurnAuxPowerOff, NO_AUX_POWER_REQUIRED_DELAY, true);
+
+
+
+void StartIdleAnimation()
+{
+  if (direction == Direction::Down)
+  {
+    curIdleLed = NUM_LEDS;
+  }
+  else
+  {
+    curIdleLed = 0;
+  }
+
+  idleAnimationTimer.Activate(true);
+}
 
 void setup()
 {
@@ -344,6 +384,7 @@ void loop()
       if (!lightIsOn)
       {
         LightsOn();
+        StartIdleAnimation();
         lightsOffTimer.Activate(true);
       }
     }
@@ -367,7 +408,8 @@ void loop()
   readAmbientTimer.Tick();
   lightsOffTimer.Tick();
   auxPowerOffTimer.Tick();
+  idleAnimationTimer.Tick();
 
   //TODO - MAYBE IDLE ANIMATION
-  delay(100);
+  delay(50);
 }
