@@ -11,13 +11,14 @@
 #define AMBIENT1_PIN (uint8_t) A2
 #define AMBIENT2_PIN (uint8_t) A3
 
-#define NUM_LEDS (uint16_t) 300
+#define NUM_LEDS 300
+#define MAX_LED 299
 #define BRIGHTNESS 10
 #define COLOR_ORDER GRB
 #define CHIPSET WS2812
 
 #define MAIN_COLOR CRGB::FairyLight
-#define ACCENT_COLOR CRGB::Blue
+#define ACCENT_COLOR CRGB::Red
 
 #define AMBIENT_DAYLIGHT_THRESHOLD 200ul
 
@@ -40,7 +41,7 @@ enum Direction
 // CRGB leds[NUM_LEDS];
 CRGBArray<NUM_LEDS> leds;
 
-uint16_t curIdleLed = 0;
+int curIdleLed = 0;
 
 bool lightIsOn = false;
 bool auxPowerOn = false;
@@ -247,18 +248,23 @@ void IdleAnimationTick()
 {
   leds.fill_solid(MAIN_COLOR);
   leds[curIdleLed] = ACCENT_COLOR;
-
-  if (direction == Direction::Down)
+  if (curIdleLed > 1 && curIdleLed < MAX_LED)
   {
-    curIdleLed = curIdleLed <= 1 ? NUM_LEDS : curIdleLed - 1;
+    leds[curIdleLed - 1] = ACCENT_COLOR;
+  }
+  FastLED.show();
+
+  if (direction == Direction::Up)
+  {
+    curIdleLed = curIdleLed <= 1 ? MAX_LED : curIdleLed - 1;
   }
   else
   {
-    curIdleLed = curIdleLed > NUM_LEDS ? 0 : curIdleLed + 1;
+    curIdleLed = curIdleLed >= MAX_LED ? 0 : curIdleLed + 1;
   }
 }
 
-TaskTimer idleAnimationTimer = TaskTimer(IdleAnimationTick, 100, false);
+TaskTimer idleAnimationTimer = TaskTimer(IdleAnimationTick, 10, false);
 
 void LightsOff()
 {
@@ -298,19 +304,15 @@ void ReadAmbient()
   daylight = ambientAverage >= AMBIENT_DAYLIGHT_THRESHOLD;
 }
 
-
-
 TaskTimer readAmbientTimer = TaskTimer(ReadAmbient, READ_AMBIENT_INTERVAL, false);
 TaskTimer lightsOffTimer = TaskTimer(LightsOff, NO_MOVEMENT_LIGHTSOFF_DELAY, true);
 TaskTimer auxPowerOffTimer = TaskTimer(TurnAuxPowerOff, NO_AUX_POWER_REQUIRED_DELAY, true);
 
-
-
 void StartIdleAnimation()
 {
-  if (direction == Direction::Down)
+  if (direction == Direction::Up)
   {
-    curIdleLed = NUM_LEDS;
+    curIdleLed = MAX_LED;
   }
   else
   {
