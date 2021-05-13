@@ -29,13 +29,6 @@
 
 #define WALKIN_FADEIN_STEP 15
 
-// DISPLAY (!RAM! Problem)
-// #define SCREEN_WIDTH 128    // OLED display width, in pixels
-// #define SCREEN_HEIGHT 32    // OLED display height, in pixels
-// #define OLED_RESET 4        // Reset pin # (or -1 if sharing Arduino reset pin)
-// #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
-// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
 enum Direction
 {
   None = 0,
@@ -52,19 +45,6 @@ bool daylight = false;
 
 volatile bool movementFound = false;
 volatile Direction direction = Direction::None;
-
-// void PrintText(String text, bool clear = false)
-// {
-//   if (clear)
-//   {
-//     display.clearDisplay();
-//   }
-//   display.setTextColor(SSD1306_WHITE);
-//   display.setTextSize(1);
-//   display.setCursor(0, 0);
-//   display.println(text); //Textzeile ausgeben
-//   display.display();
-// }
 
 void movementDetectedFirstFloor()
 {
@@ -391,6 +371,4 @@ void loop()
 
   //TODO - MAYBE IDLE ANIMATION
   delay(100);
-
-  // PrintText("Ambient: " + String(ambient1) + "|" + String(ambient2) + "|" + String(ambientAverage) + "\nDaylight: " + String(daylight), true);
 }
