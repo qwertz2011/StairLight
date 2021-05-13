@@ -226,9 +226,9 @@ void LightsOffDefault()
 {
   int mDelay = SingleLedDelay();
 
-  for (int buh = 1; buh < NUM_LEDS - 1; buh++)
+  for (int led = 0; led < NUM_LEDS; led++)
   {
-    leds[buh] = CRGB::Black;
+    leds[led] = CRGB::Black;
     FastLED.show();
     delay(mDelay);
   }
@@ -241,8 +241,7 @@ void LightsOffInstant()
 
 void LightsOff()
 {
-
-  int randomLight = (int)random(4);
+  int randomLight = (int)random(0,1);
 
   switch (randomLight)
   {
