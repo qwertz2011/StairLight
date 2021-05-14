@@ -1,3 +1,4 @@
+#include <main.h>
 #include <Arduino.h>
 #include <Adafruit_SSD1306.h>
 #define FASTLED_INTERNAL //Disable Debug Version Number of FastLED
@@ -50,6 +51,11 @@ bool daylight = false;
 volatile bool movementFound = false;
 volatile Direction movementDirection = Direction::None;
 Direction direction = Direction::None;
+
+TaskTimer readAmbientTimer = TaskTimer(ReadAmbient, READ_AMBIENT_INTERVAL, false);
+TaskTimer lightsOffTimer = TaskTimer(LightsOff, NO_MOVEMENT_LIGHTSOFF_DELAY, true);
+TaskTimer auxPowerOffTimer = TaskTimer(TurnAuxPowerOff, NO_AUX_POWER_REQUIRED_DELAY, true);
+TaskTimer idleAnimationTimer = TaskTimer(IdleAnimationTick, 10, false);
 
 void movementDetectedFirstFloor()
 {
@@ -125,7 +131,7 @@ void LightsWalkIn()
   int mDelay = SingleLedDelay();
   if (direction == Direction::Down)
   {
-    for (int ZZZ = 0; ZZZ < NUM_LEDS - 1; ZZZ++)
+    for (int ZZZ = 0; ZZZ < MAX_LED; ZZZ++)
     {
       leds[ZZZ] = CRGB::FairyLight;
       FastLED.delay(mDelay);
@@ -133,7 +139,7 @@ void LightsWalkIn()
   }
   else
   {
-    for (int ZZZ = NUM_LEDS - 1; ZZZ >= 0; ZZZ--)
+    for (int ZZZ = MAX_LED; ZZZ >= 0; ZZZ--)
     {
       leds[ZZZ] = MAIN_COLOR;
       FastLED.delay(mDelay);
@@ -256,15 +262,21 @@ void IdleAnimationTick()
 
   if (direction == Direction::Up)
   {
-    curIdleLed = curIdleLed <= 1 ? MAX_LED : curIdleLed - 1;
+    curIdleLed -= 2;
+    if (curIdleLed <= 1)
+    {
+      curIdleLed = MAX_LED;
+    }
   }
   else
   {
-    curIdleLed = curIdleLed >= MAX_LED ? 0 : curIdleLed + 1;
+    curIdleLed += 2;
+    if (curIdleLed >= MAX_LED)
+    {
+      curIdleLed = 0;
+    }
   }
 }
-
-TaskTimer idleAnimationTimer = TaskTimer(IdleAnimationTick, 10, false);
 
 void LightsOff()
 {
@@ -303,10 +315,6 @@ void ReadAmbient()
   ambientAverage = (ambient1 + ambient2) / 2;
   daylight = ambientAverage >= AMBIENT_DAYLIGHT_THRESHOLD;
 }
-
-TaskTimer readAmbientTimer = TaskTimer(ReadAmbient, READ_AMBIENT_INTERVAL, false);
-TaskTimer lightsOffTimer = TaskTimer(LightsOff, NO_MOVEMENT_LIGHTSOFF_DELAY, true);
-TaskTimer auxPowerOffTimer = TaskTimer(TurnAuxPowerOff, NO_AUX_POWER_REQUIRED_DELAY, true);
 
 void StartIdleAnimation()
 {
